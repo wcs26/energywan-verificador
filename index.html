@@ -423,5 +423,25 @@ nifBtn.addEventListener("click",doNIF);
 nifIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();doNIF();}});
 })();
 </script>
+<script>
+(function(){
+"use strict";
+var W="https://energywan-tracker.gmeet-mameilleureenergie.workers.dev/t";
+function uid(){try{var k=localStorage.getItem("ev_uid");if(!k){k="v-"+Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem("ev_uid",k);}return k;}catch(e){return "v-anon";}}
+function uname(){try{return localStorage.getItem("ev_name")||"";}catch(e){return "";}}
+function tz(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"";}catch(e){return "";}}
+var secs=0,t0=Date.now();
+function beacon(ev){ try{
+  if(!document.hidden) secs+=Math.round((Date.now()-t0)/1000); t0=Date.now();
+  var body=JSON.stringify({id:uid(),name:uname(),tz:tz(),lang:navigator.language||"",secs:secs,page:"verificador",event:ev});
+  if(navigator.sendBeacon){ navigator.sendBeacon(W, new Blob([body],{type:"text/plain"})); }
+  else { fetch(W,{method:"POST",headers:{"Content-Type":"text/plain"},body:body,keepalive:true}).catch(function(){}); }
+}catch(e){} }
+beacon("load");
+setInterval(function(){ if(!document.hidden) beacon("ping"); }, 30000);
+document.addEventListener("visibilitychange",function(){ beacon("ping"); });
+window.addEventListener("beforeunload",function(){ beacon("unload"); });
+})();
+</script>
 </body>
 </html>
