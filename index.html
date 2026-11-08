@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Verificador Open Data · Energywan</title>
+<style>
+:root{
+  --bg:#f5f8f5;--surface:#fff;--surface2:#eef2ee;--fg:#16211c;--muted:#5a6a62;--line:#e0e6e1;
+  --accent:#489034;--accent-ink:#356b26;--accent-soft:#e8f3e1;--es:#0d5a86;--es-soft:#e1edf6;
+  --warn:#9c5c05;--warn-soft:#f7ebd7;--bad:#c23b3b;--bad-soft:#fbe6e6;--gold:#bb8e2e;
+  --radius:14px;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#101512;--surface:#18201b;--surface2:#1e2621;--fg:#e7ede9;--muted:#9db0a7;--line:#2a332d;
+  --accent:#7cc659;--accent-ink:#a9e08a;--accent-soft:#182912;--es:#67b2e2;--es-soft:#122838;
+  --warn:#e2a654;--warn-soft:#2c2413;--bad:#e67272;--bad-soft:#2f1717;--gold:#d9b85c;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left)) 60px}
+header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--accent-soft),transparent)}
+.hero{display:flex;flex-direction:column;gap:8px;padding:26px max(16px,env(safe-area-inset-left)) 20px;max-width:860px;margin:0 auto}
+.brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.2px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+h1{font-size:clamp(22px,5vw,32px);margin:4px 0 0}
+.sub{color:var(--muted);max-width:60ch}
+.tabs{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.tabs button{font-family:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 15px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pane{padding-top:22px}
+.pane[hidden]{display:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0}
+.card h2{font-size:18px;margin:0 0 4px}
+.card .hint{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input{flex:1;min-width:200px;font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:var(--surface2);color:var(--fg)}
+button.go{font-family:inherit;font-size:15px;font-weight:600;background:var(--accent);color:#fff;border:none;padding:11px 20px;border-radius:10px;cursor:pointer}
+button.go:disabled{opacity:.5;cursor:default}
+.out{margin-top:14px}
+.msg{padding:11px 13px;border-radius:10px;font-size:14px;border:1px solid}
+.msg.load{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.msg.err{background:var(--bad-soft);border-color:var(--bad);color:var(--fg)}
+.msg.ok{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.res{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;background:var(--surface)}
+.res .nom{font-weight:700;font-size:16px;margin-bottom:2px}
+.res .state{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.res .state.active{background:var(--accent-soft);color:var(--accent-ink)}
+.res .state.ceased{background:var(--bad-soft);color:var(--bad)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;margin-top:10px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-variant-numeric:tabular-nums;word-break:break-word}
+.reflink{display:inline-block;margin-top:10px;font-size:13.5px;color:var(--accent-ink);font-weight:600}
+a{color:var(--accent-ink)}
+.val{margin-top:12px;padding:11px 13px;border-radius:10px;font-size:14px;border:1px solid;display:none}
+.val.ok{background:var(--accent-soft);border-color:var(--accent)}
+.val.bad{background:var(--bad-soft);border-color:var(--bad)}
+.val.neu{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.sources{font-size:13px;color:var(--muted);margin-top:10px}
+.sources a{margin-right:4px}
+.selv{font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:11px 10px;background:var(--surface2);color:var(--fg)}
+.badge2{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink)}
+.badge2.r{background:var(--surface2);color:var(--muted)}
+.usob{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle}
+.usob.t{background:var(--accent-soft);color:var(--accent-ink)}
+.usob.r{background:var(--surface2);color:var(--muted)}
+.usob.n{background:var(--es-soft);color:var(--es)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.chips>span{font-size:12.5px;color:var(--muted)}
+.chip{font-family:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+#oCsv{margin-left:auto;background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+footer{color:var(--muted);font-size:12.5px;padding:18px max(16px,env(safe-area-inset-left));max-width:860px;margin:0 auto;border-top:1px solid var(--line)}
+.dis{font-size:12px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <span class="brand"><span class="dot"></span>Energywan · Verificador</span>
+    <h1>Verificar entidades y edificios</h1>
+    <p class="sub">Consulta datos públicos reales: empresas francesas (SIRENE/INSEE), referencia catastral española (Catastro) y validación de NIF/CIF/SIRET. Datos para preparar y cualificar un dossier CAE — nunca para inventar cifras.</p>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="fr" aria-selected="true">🇫🇷 Entreprise (SIRENE)</button>
+      <button role="tab" data-tab="es" aria-selected="false">🇪🇸 España (buscar · Catastro · NIF)</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section class="pane" id="pane-fr">
+  <div class="card">
+    <h2>Recherche entreprise (France)</h2>
+    <p class="hint">Nom, SIREN (9 chiffres) ou SIRET (14 chiffres). Données live de l'API publique <b>Recherche-Entreprises</b> (INSEE / data.gouv).</p>
+    <div class="row">
+      <input id="frIn" placeholder="Ex : « Idex », 552081317, 55208131700024…" autocomplete="off">
+      <button class="go" id="frBtn">Rechercher</button>
+    </div>
+    <div class="out" id="frOut"></div>
+  </div>
+</section>
+
+<section class="pane" id="pane-es" hidden>
+  <div class="card">
+    <h2>🎯 Encontrar edificios cibles (OpenStreetMap)</h2>
+    <p class="hint">Lista establecimientos reales por tipo y ciudad — para generar llamadas en zona E (Ávila/Burgos/León/Soria). Cada resultado enlaza al Catastro para ver uso/superficie/año.</p>
+    <div class="row">
+      <select id="oType" class="selv">
+        <option value="resi">Residencias / centros de mayores</option>
+        <option value="salud">Hospitales / clínicas</option>
+        <option value="edu">Colegios / institutos / universidades</option>
+        <option value="hotel">Hoteles</option>
+        <option value="publi">Ayuntamientos / bibliotecas / públicos</option>
+        <option value="reli">Monasterios / religiosos</option>
+      </select>
+      <input id="oCity" placeholder="Ciudad / municipio — ej: BURGOS" style="min-width:170px">
+      <button class="go" id="oBtn">Buscar</button>
+    </div>
+    <div class="chips" id="zonaE">
+      <span>Zona E:</span>
+      <button class="chip" data-city="Ávila">Ávila</button>
+      <button class="chip" data-city="Burgos">Burgos</button>
+      <button class="chip" data-city="León">León</button>
+      <button class="chip" data-city="Soria">Soria</button>
+      <button class="chip" id="oCsv" hidden>⬇ Exportar CSV</button>
+    </div>
+    <div class="out" id="oOut"></div>
+  </div>
+  <div class="card">
+    <h2>Buscar edificio por dirección (Catastro)</h2>
+    <p class="hint">Datos <b>reales y en directo</b> del Catastro: uso, superficie y año por unidad — para cualificar un edificio antes de llamar. <span class="badge2">Terciario</span> = candidato TER010 · <span class="badge2 r">Residencial</span> = RES022.</p>
+    <div class="row">
+      <input id="dProv" placeholder="Provincia — ej: BURGOS">
+      <input id="dMun" placeholder="Municipio — ej: BURGOS">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <select id="dTv" class="selv">
+        <option value="CL">Calle (CL)</option><option value="AV">Avenida (AV)</option><option value="PZ">Plaza (PZ)</option><option value="PS">Paseo (PS)</option><option value="CR">Carretera (CR)</option><option value="TR">Travesía (TR)</option><option value="GL">Glorieta (GL)</option><option value="CM">Camino (CM)</option><option value="RD">Ronda (RD)</option><option value="UR">Urbanización (UR)</option>
+      </select>
+      <input id="dVia" placeholder="Vía — ej: VITORIA" style="min-width:150px">
+      <input id="dNum" placeholder="Nº" style="max-width:90px;min-width:70px">
+      <button class="go" id="dBtn">Buscar</button>
+    </div>
+    <div class="out" id="dOut"></div>
+  </div>
+  <div class="card">
+    <h2>Por referencia catastral</h2>
+    <p class="hint">14–20 caracteres. Detalle completo: uso, superficie, año y construcciones.</p>
+    <div class="row">
+      <input id="rcIn" placeholder="Ej: 9872023VH5797S0001WX" autocomplete="off">
+      <button class="go" id="rcBtn">Consultar</button>
+    </div>
+    <div class="out" id="rcOut"></div>
+  </div>
+  <div class="card">
+    <h2>Validar NIF / CIF / NIE</h2>
+    <p class="hint">Validación de checksum en local (confirma el formato, no la existencia).</p>
+    <div class="row">
+      <input id="nifIn" placeholder="Ej: B12345674, 12345678Z…" autocomplete="off">
+      <button class="go" id="nifBtn">Validar</button>
+    </div>
+    <div class="val" id="nifOut"></div>
+    <div class="sources">Datos de empresa por NIF/CIF (no hay API pública libre): <a href="https://www.infocif.es/" target="_blank" rel="noopener">InfoCIF</a> · <a href="https://www.e-informa.com/" target="_blank" rel="noopener">eInforma</a></div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <b>Energywan · Verificador Open Data.</b> Fuentes: Recherche-Entreprises (api.gouv.fr) · Catastro (ovc.catastro) · algoritmos de control NIF/CIF/SIRET en local.
+  <div class="dis">Datos públicos con fines de cualificación profesional. La elegibilidad y las cifras de un dossier CAE se confirman siempre con la visita técnica y el CEE previo — nunca se inventan por teléfono.</div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var IH="inner"+"HTML";
+function showTab(t){
+  document.getElementById("pane-fr").hidden=(t!=="fr");
+  document.getElementById("pane-es").hidden=(t!=="es");
+  document.querySelectorAll('.tabs button').forEach(function(b){b.setAttribute("aria-selected",b.getAttribute("data-tab")===t?"true":"false");});
+}
+document.querySelectorAll('.tabs button').forEach(function(b){b.addEventListener("click",function(){showTab(b.getAttribute("data-tab"));});});
+
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function msg(host,cls,txt){host[IH]="";var m=el("div","msg "+cls,txt);host.appendChild(m);return m;}
+
+var frBtn=document.getElementById("frBtn"),frIn=document.getElementById("frIn"),frOut=document.getElementById("frOut");
+function etatBadge(res,etat){var s=el("span","state "+(etat==="A"?"active":"ceased"),etat==="A"?"En activité":"Cessée");res.querySelector(".nom").appendChild(s);}
+async function doFR(){
+  var q=(frIn.value||"").trim(); if(!q){frIn.focus();return;}
+  msg(frOut,"load","Recherche en cours…"); frBtn.disabled=true;
+  try{
+    var url="https://recherche-entreprises.api.gouv.fr/search?q="+encodeURIComponent(q)+"&page=1&per_page=10";
+    var r=await fetch(url); if(!r.ok) throw new Error("HTTP "+r.status);
+    var j=await r.json();
+    frOut[IH]="";
+    var n=(j.results||[]).length;
+    msg(frOut,"ok", n+" résultat(s) · "+(j.total_results||n)+" au total");
+    (j.results||[]).forEach(function(c){
+      var res=el("div","res");
+      res.appendChild(el("div","nom", c.nom_complet || c.nom_raison_sociale || "(sans nom)"));
+      etatBadge(res, c.etat_administratif);
+      var dl=el("dl","kv");
+      function add(k,v){ if(v==null||v==="")return; dl.appendChild(el("dt",null,k)); dl.appendChild(el("dd",null,v)); }
+      add("SIREN", c.siren);
+      var si=c.siege||{};
+      add("SIRET (siège)", si.siret);
+      add("Activité", [c.activite_principale, c.libelle_activite_principale].filter(Boolean).join(" · "));
+      add("Nature jur.", c.libelle_nature_juridique || c.nature_juridique);
+      add("Adresse", si.adresse || si.geo_adresse);
+      add("CP / Ville", [si.code_postal, si.libelle_commune || si.commune].filter(Boolean).join(" "));
+      add("Effectif", c.tranche_effectif_salarie ? ("tranche "+c.tranche_effectif_salarie) : "");
+      add("Création", c.date_creation);
+      if(c.dirigeants && c.dirigeants.length){
+        var nd=c.dirigeants.slice(0,3).map(function(d){ return d.nom_complet || [d.prenoms,d.nom].filter(Boolean).join(" ") || d.denomination; }).filter(Boolean).join(", ");
+        add("Dirigeant(s)", nd);
+      }
+      res.appendChild(dl);
+      if(c.siren){ var a=el("a","reflink","↗ Ouvrir sur Annuaire des Entreprises"); a.href="https://annuaire-entreprises.data.gouv.fr/entreprise/"+c.siren; a.target="_blank"; a.rel="noopener"; res.appendChild(a); }
+      frOut.appendChild(res);
+    });
+    if(n===0){ msg(frOut,"load","Aucun résultat. Vérifie l'orthographe ou essaie le SIREN/SIRET."); }
+  }catch(e){
+    msg(frOut,"err","Impossible de joindre l'API ("+(e&&e.message||e)+"). Si tu as ouvert ce fichier directement, réessaie ; sinon vérifie ta connexion.");
+  }
+  frBtn.disabled=false;
+}
+frBtn.addEventListener("click",doFR);
+frIn.addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault();doFR();} });
+
+var dBtn=document.getElementById("dBtn"),dOut=document.getElementById("dOut");
+var rcBtn=document.getElementById("rcBtn"),rcIn=document.getElementById("rcIn"),rcOut=document.getElementById("rcOut");
+function V(id){var e=document.getElementById(id);return e?(e.value||"").trim():"";}
+function enc(s){return encodeURIComponent(s||"");}
+function deepFind(o,key){ if(!o||typeof o!=="object")return null; if(o[key]!=null)return o[key]; for(var k in o){ var v=deepFind(o[k],key); if(v!=null)return v; } return null; }
+function fullRC(rc){ if(!rc)return ""; return (rc.pc1||"")+(rc.pc2||"")+(rc.car||"")+(rc.cc1||"")+(rc.cc2||""); }
+function isTerc(l){ if(!l)return null; l=l.toLowerCase(); if(l.indexOf("residencial")>=0)return false; if(l.indexOf("industrial")>=0||l.indexOf("almac")>=0||l.indexOf("suelo")>=0||l.indexOf("agrar")>=0||l.indexOf("aparca")>=0)return null; return true; }
+function unitCard(host,rc,luso,sfc,ant,ldt){
+  var res=el("div","res"); var nom=el("div","nom","RC "+rc);
+  var t=isTerc(luso); nom.appendChild(el("span","usob "+(t===true?"t":(t===false?"r":"n")), t===true?"Terciario":(t===false?"Residencial":"Otro")));
+  res.appendChild(nom);
+  var dl=el("dl","kv"); function add(k,v){ if(v==null||v==="")return; dl.appendChild(el("dt",null,k)); dl.appendChild(el("dd",null,String(v))); }
+  add("Uso",luso); add("Superficie", sfc?(sfc+" m²"):null); add("Año",ant); add("Localización",ldt);
+  res.appendChild(dl);
+  if(rc){ var a=el("a","reflink","↗ Ficha en el Catastro"); a.href="https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCConCiud.aspx?RefC="+enc(rc); a.target="_blank"; a.rel="noopener"; res.appendChild(a); }
+  host.appendChild(res); return t;
+}
+async function doDir(){
+  var prov=V("dProv"),mun=V("dMun"),tv=V("dTv"),via=V("dVia"),num=V("dNum");
+  if(!prov||!mun||!via){ msg(dOut,"err","Rellena provincia, municipio y vía."); return; }
+  msg(dOut,"load","Buscando en el Catastro…"); dBtn.disabled=true;
+  try{
+    var u="https://ovc.catastro.meh.es/OVCServWeb/OVCWcfCallejero/COVCCallejero.svc/json/Consulta_DNPLOC?Provincia="+enc(prov)+"&Municipio="+enc(mun)+"&Sigla="+enc(tv)+"&Calle="+enc(via)+"&Numero="+enc(num);
+    var r=await fetch(u); var j=await r.json();
+    var root=j.consulta_dnplocResult||{}; var errd=deepFind(root,"des");
+    var arr=[];
+    if(root.lrcdnp&&root.lrcdnp.rcdnp){ arr=root.lrcdnp.rcdnp; if(!Array.isArray(arr))arr=[arr]; }
+    else if(root.bico&&root.bico.bi){ arr=[root.bico.bi]; }
+    dOut[IH]="";
+    if(!arr.length){ msg(dOut,"load", errd?("Catastro: "+errd):"Sin resultados para esa dirección. Prueba otra vía o el número."); dBtn.disabled=false; return; }
+    msg(dOut,"ok", arr.length+" unidad(es) en esa dirección");
+    var nt=0,st=0;
+    arr.forEach(function(x){ var rc=fullRC(x.rc); var deb=x.debi||deepFind(x,"debi")||{}; var ldt=deepFind(x,"ldt"); var t=unitCard(dOut,rc,deb.luso,deb.sfc,deb.ant,ldt); if(t===true){ nt++; var sf=parseInt(deb.sfc,10); if(!isNaN(sf))st+=sf; } });
+    if(nt>0){ var s=el("div","msg ok", nt+" unidad(es) de uso TERCIARIO · "+st+" m² — candidato TER010."); s.style.marginTop="8px"; dOut.appendChild(s); }
+  }catch(e){
+    dOut[IH]=""; msg(dOut,"err","No se pudo leer la respuesta (dirección no encontrada o formato inesperado). Prueba con otra vía, o usa la referencia catastral.");
+  }
+  dBtn.disabled=false;
+}
+dBtn.addEventListener("click",doDir);
+["dProv","dMun","dVia","dNum"].forEach(function(id){ var e=document.getElementById(id); if(e)e.addEventListener("keydown",function(ev){ if(ev.key==="Enter"){ev.preventDefault();doDir();} }); });
+
+async function doRC(){
+  var ref=(rcIn.value||"").toUpperCase().replace(/[^0-9A-Z]/g,"");
+  if(ref.length<14){ msg(rcOut,"err","Introduce una referencia catastral válida (14–20 caracteres)."); return; }
+  msg(rcOut,"load","Consultando el Catastro…"); rcBtn.disabled=true;
+  var sede="https://www1.sedecatastro.gob.es/CYCBienInmueble/OVCConCiud.aspx?RefC="+enc(ref);
+  try{
+    var url="https://ovc.catastro.meh.es/OVCServWeb/OVCWcfCallejero/COVCCallejero.svc/json/Consulta_DNPRC?RefCat="+enc(ref);
+    var r=await fetch(url); var j=await r.json();
+    var root=j.consulta_dnprcResult||{}; var errd=deepFind(root,"des");
+    var deb=deepFind(root,"debi")||{}; var ldt=deepFind(root,"ldt"); var rcobj=deepFind(root,"rc");
+    rcOut[IH]="";
+    if(deb.luso||deb.sfc||ldt){
+      msg(rcOut,"ok","Datos del Catastro");
+      unitCard(rcOut, rcobj?fullRC(rcobj):ref, deb.luso, deb.sfc, deb.ant, ldt);
+      var lcons=deepFind(root,"lcons");
+      if(Array.isArray(lcons)&&lcons.length){
+        var det=el("div","res"); det.appendChild(el("div","nom","Construcciones ("+lcons.length+")"));
+        var dl=el("dl","kv");
+        lcons.slice(0,14).forEach(function(c){ var tipo=deepFind(c,"dtip")||deepFind(c,"lcd")||"-"; var sl=deepFind(c,"stl"); dl.appendChild(el("dt",null,String(tipo))); dl.appendChild(el("dd",null, sl?(sl+" m²"):"")); });
+        det.appendChild(dl); rcOut.appendChild(det);
+      }
+    } else { msg(rcOut,"load", errd?("Catastro: "+errd):"Sin datos legibles."); var a=el("a","reflink","↗ Abrir ficha en el Catastro"); a.href=sede; a.target="_blank"; a.rel="noopener"; rcOut.appendChild(a); }
+  }catch(e){
+    rcOut[IH]=""; msg(rcOut,"err","Referencia no válida o no encontrada. Compruébala en la Sede:");
+    var a2=el("a","reflink","↗ Sede del Catastro"); a2.href=sede; a2.target="_blank"; a2.rel="noopener"; rcOut.appendChild(a2);
+  }
+  rcBtn.disabled=false;
+}
+rcBtn.addEventListener("click",doRC);
+rcIn.addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault();doRC();} });
+
+function luhnOk(s){var sum=0,alt=false;for(var i=s.length-1;i>=0;i--){var n=+s.charAt(i);if(alt){n*=2;if(n>9)n-=9;}sum+=n;alt=!alt;}return sum%10===0;}
+function cifOk(v){var ctrl=v.charAt(8),digs=v.slice(1,8),s=0;for(var i=0;i<7;i++){var n=+digs.charAt(i);if(i%2===0){n*=2;if(n>9)n=Math.floor(n/10)+(n%10);}s+=n;}var e=(10-(s%10))%10;return(ctrl===String(e)||ctrl==="JABCDEFGHI".charAt(e));}
+function validId(raw){
+  var v=(raw||"").toUpperCase().replace(/[^0-9A-Z]/g,"");
+  if(!v)return{k:null,m:"Introduce un identificador."};
+  if(/^[0-9]{14}$/.test(v))return luhnOk(v)?{k:1,m:"SIRET francés válido (Luhn correcto). Búscalo en la pestaña 🇫🇷."}:{k:0,m:"SIRET (14 cifras): checksum Luhn incorrecto."};
+  if(/^[0-9]{9}$/.test(v))return luhnOk(v)?{k:1,m:"SIREN francés válido (Luhn correcto)."}:{k:0,m:"SIREN (9 cifras): checksum Luhn incorrecto."};
+  if(/^[0-9]{8}[A-Z]$/.test(v)){var L="TRWAGMYFPDXBNJZSQVHLCKE";return v.charAt(8)===L.charAt(parseInt(v.slice(0,8),10)%23)?{k:1,m:"DNI/NIF español válido."}:{k:0,m:"DNI/NIF: la letra de control no cuadra."};}
+  if(/^[XYZ][0-9]{7}[A-Z]$/.test(v)){var M={X:"0",Y:"1",Z:"2"},L2="TRWAGMYFPDXBNJZSQVHLCKE",num=M[v.charAt(0)]+v.slice(1,8);return v.charAt(8)===L2.charAt(parseInt(num,10)%23)?{k:1,m:"NIE español válido."}:{k:0,m:"NIE: la letra de control no cuadra."};}
+  if(/^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/.test(v))return cifOk(v)?{k:1,m:"CIF español válido."}:{k:0,m:"CIF: el dígito/letra de control no cuadra."};
+  if(/^[0-9A-Z]{20}$/.test(v))return{k:null,m:"Parece una referencia catastral (20 car.). Úsala arriba, en «Referencia catastral»."};
+  return{k:null,m:"Formato no reconocido. ¿NIF/CIF español o SIRET/SIREN francés?"};
+}
+/* ---- OSM / Overpass : encontrar cibles ---- */
+var oBtn=document.getElementById("oBtn"),oOut=document.getElementById("oOut");
+var lastOSM=[];
+function csvEsc(s){s=(s==null?"":String(s));return '"'+s.replace(/"/g,'""')+'"';}
+function exportCSV(){
+  if(!lastOSM.length)return;
+  var rows=[["Nombre","Tipo","Direccion","Telefono","Web","Lat","Lon","Ciudad"]];
+  lastOSM.forEach(function(r){ rows.push([r.name,r.tipo,r.addr,r.tel,r.web,r.lat,r.lon,r.city]); });
+  var csv="﻿"+rows.map(function(r){return r.map(csvEsc).join(";");}).join("\r\n");
+  try{ var blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="cibles_"+String((lastOSM[0]&&lastOSM[0].city)||"osm").replace(/[^0-9A-Za-z]/g,"_")+".csv"; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(url);a.remove();},1200); }catch(e){}
+}
+(function(){
+  var cs=document.getElementById("oCsv"); if(cs)cs.addEventListener("click",exportCSV);
+  document.querySelectorAll('#zonaE .chip[data-city]').forEach(function(b){ b.addEventListener("click",function(){ setV("oCity", b.getAttribute("data-city")); doOSM(); }); });
+})();
+var OSEL={
+  resi:'nwr["amenity"="nursing_home"](area.a);nwr["amenity"="social_facility"](area.a);',
+  salud:'nwr["amenity"="hospital"](area.a);nwr["amenity"="clinic"](area.a);',
+  edu:'nwr["amenity"="school"](area.a);nwr["amenity"="college"](area.a);nwr["amenity"="university"](area.a);',
+  hotel:'nwr["tourism"="hotel"](area.a);nwr["tourism"="guest_house"](area.a);',
+  publi:'nwr["amenity"="townhall"](area.a);nwr["amenity"="library"](area.a);nwr["amenity"="community_centre"](area.a);nwr["office"="government"](area.a);',
+  reli:'nwr["building"="monastery"](area.a);nwr["historic"="monastery"](area.a);nwr["amenity"="place_of_worship"]["religion"="christian"](area.a);'
+};
+function setV(id,v){var e=document.getElementById(id);if(e)e.value=v||"";}
+function prefillCatastro(city,street,num){
+  var tv="CL", via=street||"";
+  var m=(via||"").match(/^(calle|c\/|avenida|avda|avda\.|av\.|plaza|pza|paseo|p\u00ba|carretera|ctra|camino|ronda|travesia|traves\u00eda|glorieta)\s+(.*)$/i);
+  if(m){ var map={"calle":"CL","c/":"CL","avenida":"AV","avda":"AV","avda.":"AV","av.":"AV","plaza":"PZ","pza":"PZ","paseo":"PS","p\u00ba":"PS","carretera":"CR","ctra":"CR","camino":"CM","ronda":"RD","travesia":"TR","traves\u00eda":"TR","glorieta":"GL"}; tv=map[m[1].toLowerCase()]||"CL"; via=m[2]; }
+  setV("dProv",city); setV("dMun",city); setV("dVia",via); setV("dNum",num||"");
+  var sel=document.getElementById("dTv"); if(sel)sel.value=tv;
+  var tgt=document.getElementById("dOut"); if(tgt)tgt.scrollIntoView({behavior:"smooth",block:"center"});
+  if(typeof doDir==="function") doDir();
+}
+async function doOSM(){
+  var ty=V("oType"),city=V("oCity"); if(!city){ msg(oOut,"err","Introduce una ciudad o municipio."); return; }
+  msg(oOut,"load","Buscando en OpenStreetMap\u2026 (unos segundos)"); oBtn.disabled=true;
+  try{
+    var q='[out:json][timeout:25];area["name"="'+city.replace(/["\\]/g,"")+'"]["boundary"="administrative"]->.a;('+(OSEL[ty]||OSEL.resi)+');out center 80;';
+    var u="https://overpass-api.de/api/interpreter?data="+enc(q);
+    var r=await fetch(u); if(!r.ok) throw new Error("HTTP "+r.status);
+    var j=await r.json();
+    var els=(j.elements||[]).filter(function(e){ return e.tags && e.tags.name; });
+    oOut[IH]="";
+    if(!els.length){ msg(oOut,"load","Sin resultados. Comprueba el nombre exacto del municipio o prueba otro tipo."); oBtn.disabled=false; return; }
+    msg(oOut,"ok", els.length+" establecimiento(s) \u00b7 fuente OpenStreetMap");
+    lastOSM=[];
+    els.slice(0,80).forEach(function(e){
+      var t=e.tags; var res=el("div","res");
+      res.appendChild(el("div","nom", t.name));
+      var dl=el("dl","kv"); function add(k,v){ if(v==null||v==="")return; dl.appendChild(el("dt",null,k)); dl.appendChild(el("dd",null,v)); }
+      add("Tipo", t.amenity||t.tourism||t.building||t.office||t.historic||"");
+      var addr=[t["addr:street"],t["addr:housenumber"]].filter(Boolean).join(" ");
+      add("Direcci\u00f3n", addr||null);
+      add("Tel\u00e9fono", t.phone||t["contact:phone"]);
+      add("Web", t.website||t["contact:website"]);
+      res.appendChild(dl);
+      var lat=e.lat||(e.center&&e.center.lat), lon=e.lon||(e.center&&e.center.lon);
+      lastOSM.push({name:t.name,tipo:(t.amenity||t.tourism||t.building||t.office||t.historic||""),addr:addr,tel:(t.phone||t["contact:phone"]||""),web:(t.website||t["contact:website"]||""),lat:lat||"",lon:lon||"",city:city});
+      var bar=el("div",null,null); bar.style.marginTop="10px"; bar.style.display="flex"; bar.style.gap="10px"; bar.style.flexWrap="wrap"; bar.style.alignItems="center";
+      if(lat&&lon){ var am=el("a","reflink","\u2197 Mapa"); am.style.margin="0"; am.href="https://www.openstreetmap.org/?mlat="+lat+"&mlon="+lon+"#map=18/"+lat+"/"+lon; am.target="_blank"; am.rel="noopener"; bar.appendChild(am); }
+      if(t["addr:street"]){ var cb=el("button",null,"\u2192 Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(city, t["addr:street"], t["addr:housenumber"]); }); bar.appendChild(cb); }
+      if(bar.childNodes.length) res.appendChild(bar);
+      oOut.appendChild(res);
+    });
+    var _cs=document.getElementById("oCsv"); if(_cs)_cs.hidden=false;
+  }catch(err){
+    oOut[IH]=""; msg(oOut,"err","No se pudo consultar OpenStreetMap ("+(err&&err.message||err)+"). Reintenta en unos segundos.");
+  }
+  oBtn.disabled=false;
+}
+oBtn.addEventListener("click",doOSM);
+(function(){var c=document.getElementById("oCity"); if(c)c.addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault();doOSM();} });})();
+
+var nifBtn=document.getElementById("nifBtn"),nifIn=document.getElementById("nifIn"),nifOut=document.getElementById("nifOut");
+function doNIF(){var r=validId(nifIn.value);nifOut.style.display="block";nifOut.className="val "+(r.k===1?"ok":(r.k===0?"bad":"neu"));nifOut.textContent=r.m;}
+nifBtn.addEventListener("click",doNIF);
+nifIn.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();doNIF();}});
+})();
+</script>
+</body>
+</html>
