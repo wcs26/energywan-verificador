@@ -342,11 +342,12 @@ var OSEL={
   reli:'nwr["building"="monastery"](area.a);nwr["historic"="monastery"](area.a);nwr["amenity"="place_of_worship"]["religion"="christian"](area.a);'
 };
 function setV(id,v){var e=document.getElementById(id);if(e)e.value=v||"";}
-function prefillCatastro(city,street,num){
+function cleanProv(p){ return (p||"").replace(/^(provincia de|province of)\s+/i,"").trim(); }
+function prefillCatastro(prov,muni,street,num){
   var tv="CL", via=street||"";
   var m=(via||"").match(/^(calle|c\/|avenida|avda|avda\.|av\.|plaza|pza|paseo|p\u00ba|carretera|ctra|camino|ronda|travesia|traves\u00eda|glorieta)\s+(.*)$/i);
   if(m){ var map={"calle":"CL","c/":"CL","avenida":"AV","avda":"AV","avda.":"AV","av.":"AV","plaza":"PZ","pza":"PZ","paseo":"PS","p\u00ba":"PS","carretera":"CR","ctra":"CR","camino":"CM","ronda":"RD","travesia":"TR","traves\u00eda":"TR","glorieta":"GL"}; tv=map[m[1].toLowerCase()]||"CL"; via=m[2]; }
-  setV("dProv",city); setV("dMun",city); setV("dVia",via); setV("dNum",num||"");
+  setV("dProv",cleanProv(prov)||muni||""); setV("dMun",muni||cleanProv(prov)||""); setV("dVia",via); setV("dNum",num||"");
   var sel=document.getElementById("dTv"); if(sel)sel.value=tv;
   var tgt=document.getElementById("dOut"); if(tgt)tgt.scrollIntoView({behavior:"smooth",block:"center"});
   if(typeof doDir==="function") doDir();
@@ -363,11 +364,12 @@ async function doNominatim(ty,city){
       var dl=el("dl","kv"); function add(k,v){ if(v==null||v==="")return; dl.appendChild(el("dt",null,k)); dl.appendChild(el("dd",null,v)); }
       var street=a.road||""; var num=a.house_number||""; var addr=[street,num].filter(Boolean).join(" ");
       var muni=a.city||a.town||a.village||a.municipality||city;
-      add("Dirección", addr||null); add("Municipio", muni);
+      var prov=a.province||a.county||a.state||city;
+      add("Dirección", addr||null); add("Municipio", muni); if(cleanProv(prov)&&cleanProv(prov)!==muni) add("Provincia", cleanProv(prov));
       res.appendChild(dl);
       var bar=el("div",null,null); bar.style.cssText="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center";
       if(x.lat&&x.lon){ var am=el("a","reflink","↗ Mapa"); am.style.margin="0"; am.href="https://www.openstreetmap.org/?mlat="+x.lat+"&mlon="+x.lon+"#map=18/"+x.lat+"/"+x.lon; am.target="_blank"; am.rel="noopener"; bar.appendChild(am); }
-      if(street){ var cb=el("button",null,"→ Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(muni,street,num); }); bar.appendChild(cb); }
+      if(street){ var cb=el("button",null,"→ Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(prov,muni,street,num); }); bar.appendChild(cb); }
       if(bar.childNodes.length) res.appendChild(bar);
       lastOSM.push({name:nm,tipo:(NTERM[ty]||""),addr:addr,tel:"",web:"",lat:x.lat||"",lon:x.lon||"",city:muni});
       oOut.appendChild(res);
@@ -403,7 +405,7 @@ async function doOSM(){
       lastOSM.push({name:t.name,tipo:(t.amenity||t.tourism||t.building||t.office||t.historic||""),addr:addr,tel:(t.phone||t["contact:phone"]||""),web:(t.website||t["contact:website"]||""),lat:lat||"",lon:lon||"",city:city});
       var bar=el("div",null,null); bar.style.marginTop="10px"; bar.style.display="flex"; bar.style.gap="10px"; bar.style.flexWrap="wrap"; bar.style.alignItems="center";
       if(lat&&lon){ var am=el("a","reflink","\u2197 Mapa"); am.style.margin="0"; am.href="https://www.openstreetmap.org/?mlat="+lat+"&mlon="+lon+"#map=18/"+lat+"/"+lon; am.target="_blank"; am.rel="noopener"; bar.appendChild(am); }
-      if(t["addr:street"]){ var cb=el("button",null,"\u2192 Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(city, t["addr:street"], t["addr:housenumber"]); }); bar.appendChild(cb); }
+      if(t["addr:street"]){ var cb=el("button",null,"\u2192 Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(t["addr:province"]||t["addr:state"]||city, t["addr:city"]||city, t["addr:street"], t["addr:housenumber"]); }); bar.appendChild(cb); }
       if(bar.childNodes.length) res.appendChild(bar);
       oOut.appendChild(res);
     });
