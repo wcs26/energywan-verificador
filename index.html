@@ -437,10 +437,31 @@ function beacon(ev){ try{
   if(navigator.sendBeacon){ navigator.sendBeacon(W, new Blob([body],{type:"text/plain"})); }
   else { fetch(W,{method:"POST",headers:{"Content-Type":"text/plain"},body:body,keepalive:true}).catch(function(){}); }
 }catch(e){} }
-beacon("load");
+window.__ewping=beacon; beacon("load");
 setInterval(function(){ if(!document.hidden) beacon("ping"); }, 30000);
 document.addEventListener("visibilitychange",function(){ beacon("ping"); });
 window.addEventListener("beforeunload",function(){ beacon("unload"); });
+})();
+</script>
+<div id="nmOv" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px">
+  <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;max-width:380px;width:100%;padding:18px">
+    <div style="font-weight:800;margin-bottom:6px">👋 ¿Cómo te llamas?</div>
+    <p style="margin:0 0 12px;font-size:13.5px;color:var(--muted)">Para identificar tu actividad.</p>
+    <div style="display:flex;gap:8px">
+      <input id="nmIn" placeholder="Tu nombre" style="flex:1;min-width:0;font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface2);color:var(--fg)">
+      <button class="go" id="nmSave">Entrar</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  try{ if(localStorage.getItem("ev_name")) return; }catch(e){ return; }
+  var ov=document.getElementById("nmOv"), inp=document.getElementById("nmIn"), sv=document.getElementById("nmSave");
+  if(!ov||!sv||!inp) return;
+  function save(){ var v=(inp.value||"").trim(); if(v){ try{localStorage.setItem("ev_name",v);}catch(e){} } ov.style.display="none"; try{ if(window.__ewping) window.__ewping("load"); }catch(e){} }
+  sv.addEventListener("click",save);
+  inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault();save();} });
+  ov.style.display="flex"; setTimeout(function(){try{inp.focus();}catch(e){}},250);
 })();
 </script>
 </body>
