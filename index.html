@@ -106,7 +106,7 @@ footer{color:var(--muted);font-size:12.5px;padding:18px max(16px,env(safe-area-i
 <section class="pane" id="pane-es" hidden>
   <div class="card">
     <h2>🎯 Encontrar edificios cibles (OpenStreetMap)</h2>
-    <p class="hint">Lista establecimientos reales por tipo y ciudad — para generar llamadas en zona E (Ávila/Burgos/León/Soria). Cada resultado enlaza al Catastro para ver uso/superficie/año.</p>
+    <p class="hint">Lista establecimientos reales por tipo y ciudad — para generar llamadas en zona E (Ávila/Burgos/León/Soria). Cada resultado enlaza al Catastro para ver uso/superficie/año. <b>Sin cuenta ni registro.</b></p>
     <div class="row">
       <select id="oType" class="selv">
         <option value="resi">Residencias / centros de mayores</option>
@@ -351,6 +351,31 @@ function prefillCatastro(city,street,num){
   var tgt=document.getElementById("dOut"); if(tgt)tgt.scrollIntoView({behavior:"smooth",block:"center"});
   if(typeof doDir==="function") doDir();
 }
+var NTERM={resi:"residencia de ancianos",salud:"hospital",edu:"colegio",hotel:"hotel",publi:"ayuntamiento",reli:"monasterio"};
+async function doNominatim(ty,city){
+  try{
+    var u="https://nominatim.openstreetmap.org/search?format=json&limit=40&addressdetails=1&q="+enc((NTERM[ty]||"edificio")+" "+city+", Espana");
+    var r=await fetch(u); if(!r.ok)return false; var arr=await r.json(); if(!arr||!arr.length)return false;
+    oOut[IH]=""; msg(oOut,"ok", arr.length+" resultado(s) · OpenStreetMap / Nominatim"); lastOSM=[];
+    arr.slice(0,40).forEach(function(x){
+      var a=x.address||{}; var nm=x.name||String(x.display_name||"").split(",")[0];
+      var res=el("div","res"); res.appendChild(el("div","nom",nm));
+      var dl=el("dl","kv"); function add(k,v){ if(v==null||v==="")return; dl.appendChild(el("dt",null,k)); dl.appendChild(el("dd",null,v)); }
+      var street=a.road||""; var num=a.house_number||""; var addr=[street,num].filter(Boolean).join(" ");
+      var muni=a.city||a.town||a.village||a.municipality||city;
+      add("Dirección", addr||null); add("Municipio", muni);
+      res.appendChild(dl);
+      var bar=el("div",null,null); bar.style.cssText="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center";
+      if(x.lat&&x.lon){ var am=el("a","reflink","↗ Mapa"); am.style.margin="0"; am.href="https://www.openstreetmap.org/?mlat="+x.lat+"&mlon="+x.lon+"#map=18/"+x.lat+"/"+x.lon; am.target="_blank"; am.rel="noopener"; bar.appendChild(am); }
+      if(street){ var cb=el("button",null,"→ Ver en Catastro"); cb.style.cssText="font-family:inherit;font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);padding:5px 12px;border-radius:8px;cursor:pointer"; cb.addEventListener("click",function(){ prefillCatastro(muni,street,num); }); bar.appendChild(cb); }
+      if(bar.childNodes.length) res.appendChild(bar);
+      lastOSM.push({name:nm,tipo:(NTERM[ty]||""),addr:addr,tel:"",web:"",lat:x.lat||"",lon:x.lon||"",city:muni});
+      oOut.appendChild(res);
+    });
+    var cs=document.getElementById("oCsv"); if(cs)cs.hidden=false;
+    return true;
+  }catch(e){ return false; }
+}
 async function doOSM(){
   var ty=V("oType"),city=V("oCity"); if(!city){ msg(oOut,"err","Introduce una ciudad o municipio."); return; }
   msg(oOut,"load","Buscando en OpenStreetMap\u2026 (unos segundos)"); oBtn.disabled=true;
@@ -361,7 +386,7 @@ async function doOSM(){
     var j=await r.json();
     var els=(j.elements||[]).filter(function(e){ return e.tags && e.tags.name; });
     oOut[IH]="";
-    if(!els.length){ msg(oOut,"load","Sin resultados. Comprueba el nombre exacto del municipio o prueba otro tipo."); oBtn.disabled=false; return; }
+    if(!els.length){ if(await doNominatim(ty,city)){ oBtn.disabled=false; return; } msg(oOut,"load","Sin resultados. Prueba otra ciudad o tipo — no necesitas ninguna cuenta."); oBtn.disabled=false; return; }
     msg(oOut,"ok", els.length+" establecimiento(s) \u00b7 fuente OpenStreetMap");
     lastOSM=[];
     els.slice(0,80).forEach(function(e){
@@ -384,7 +409,8 @@ async function doOSM(){
     });
     var _cs=document.getElementById("oCsv"); if(_cs)_cs.hidden=false;
   }catch(err){
-    oOut[IH]=""; msg(oOut,"err","No se pudo consultar OpenStreetMap ("+(err&&err.message||err)+"). Reintenta en unos segundos.");
+    if(await doNominatim(ty,city)){ oBtn.disabled=false; return; }
+    oOut[IH]=""; msg(oOut,"err","La red OpenStreetMap está saturada ahora mismo. Reintenta en unos segundos — no necesitas ninguna cuenta.");
   }
   oBtn.disabled=false;
 }
